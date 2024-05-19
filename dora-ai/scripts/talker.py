@@ -14,20 +14,19 @@ import os
 
 logger = logging.getLogger("__main__" + __name__)
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
 
 class Talker:
     def __init__(self, config):
         self.config = config
 
-        self.chunk_size = self.config['chunk_size']
-        self.chunk_overlap = self.config['chunk_overlap']
-        self.source_dir = self.config['source_dir']
-        self.api_key = self.config['api_key']
-        self.folder_id = self.config['folder_id']
-        self.db_dir = self.config['db_dir']
-        self.instructions = self.config['instructions']
+        self.chunk_size = self.config["chunk_size"]
+        self.chunk_overlap = self.config["chunk_overlap"]
+        self.source_dir = self.config["source_dir"]
+        self.api_key = self.config["api_key"]
+        self.folder_id = self.config["folder_id"]
+        self.db_dir = self.config["db_dir"]
 
         self.boot()
 
@@ -39,17 +38,17 @@ class Talker:
         self._init_reorderer()
         self._init_llm()
         self._init_chain()
-        
+
     def _init_texts(self):
         self.texts = []
-        files = glob.glob(f'{self.source_dir}/*')
+        files = glob.glob(f"{self.source_dir}/*")
         for file in files:
             with open(file, "r") as f:
                 string = f.read()
                 self.texts.append(string)
 
-        logger.info('Docs read: Done')
-        logger.info(f'Amount of docs: {len(self.texts)}')
+        logger.info("Docs read: Done")
+        logger.info(f"Amount of docs: {len(self.texts)}")
 
     def _init_embeddings(self):
         self.embeddings = langchain_community.embeddings.HuggingFaceEmbeddings(
@@ -75,20 +74,20 @@ class Talker:
         )
 
         self.vec_store = LanceDB.from_texts(self.texts, self.embeddings, connection=db)
-        logger.info('Vector store init: Done')
+        logger.info("Vector store init: Done")
 
     def _init_retriever(self):
-        self.retriever = self.vec_store.as_retriever(search_kwargs={"k": 3})
-        logger.info('Retriever init: Done')
+        self.retriever = self.vec_store.as_retriever(search_kwargs={"k": 10})
+        logger.info("Retriever init: Done")
 
     def _init_reorderer(self):
         self.reorderer = LongContextReorder()
-        logger.info('Reorderer init: Done')
+        logger.info("Reorderer init: Done")
 
     def _init_llm(self):
         self.llm = Ollama(model="llama3")
 
-        logger.info('LLM init: Done')
+        logger.info("LLM init: Done")
 
     def _init_chain(self):
         document_prompt = langchain.prompts.PromptTemplate(
@@ -114,7 +113,7 @@ class Talker:
             document_variable_name=document_variable_name,
         )
 
-        logger.info('Chain init: Done')
+        logger.info("Chain init: Done")
 
     def _query(self, query, reorder=True, show_results=True):
         results = self.retriever.get_relevant_documents(query)
@@ -122,21 +121,21 @@ class Talker:
         links = []
         if show_results:
             for x in results:
-                links.append(x.page_content.split('\n')[0])
-                print(x.page_content)
+                links.append(x.page_content.split("\n")[0])
+                logger.info(x.page_content)
 
         if reorder:
             results = self.reorderer.transform_documents(results)
 
-        logger.info(f'New query: {query}')
+        logger.info(f"New query: {query}")
 
         return [self.chain.run(input_documents=results, query=query), list(set(links))]
 
     def pretty_answer(self, query):
         llm_answer = self._query(query)
 
-        answer = f'{llm_answer[0]}\n\nБолее подробно смотри тут:\n'
+        answer = f"{llm_answer[0]}\n\nБолее подробно смотри тут:\n"
         for i, link in enumerate(llm_answer[1]):
-            answer += f'{i}. {link}\n'
+            answer += f"{i}. {link}\n"
 
         return answer

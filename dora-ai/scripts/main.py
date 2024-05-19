@@ -6,13 +6,13 @@ import argparse
 from dora_ai import DoraAI
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', action='store', required=True)
-    parser.add_argument('--logs', action='store', required=True)
+    parser.add_argument("--config", action="store", required=True)
+    parser.add_argument("--logs", action="store", required=True)
     args = parser.parse_args()
-    config_file = args.config if args.config else ''
-    logs_file = args.logs if args.logs else ''
+    config_file = args.config if args.config else ""
+    logs_file = args.logs if args.logs else ""
 
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
@@ -27,7 +27,7 @@ if __name__ == '__main__':
     sys_handler.setFormatter(formatter)
     logger.addHandler(sys_handler)
 
-    with open(config_file, 'r') as c:
+    with open(config_file, "r") as c:
         config = yaml.load(c, Loader=yaml.Loader)
 
     dora = DoraAI(config)
