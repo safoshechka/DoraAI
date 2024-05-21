@@ -23,7 +23,7 @@ DoraAI Telegram bot for MAI IT-center
   
 - Talker
   
-  Класс отвечает за парсинг Youtube-видео в текст.
+  Класс отвечает за генерацию ответов на запросы.
 
   Функции:
   - ```def _init_texts(self)```

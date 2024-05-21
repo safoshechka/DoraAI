@@ -16,11 +16,6 @@ class DoraAI:
         self.talker = Talker(self.config)
 
     def run_bot(self):
-        # @self.bot.message_handler(commands=['start'])
-        # def send_welcome(message):
-        #     msg = self.bot.send_message(message.chat.id, 'Тебя ебет или интересует?')
-        #     self.bot.register_next_step_handler(msg, get_query)
-
         @self.bot.message_handler(commands=["start"])
         def get_query(message):
             run_query = True
