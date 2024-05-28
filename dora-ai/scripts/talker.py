@@ -1,6 +1,7 @@
 from langchain_community.document_transformers import LongContextReorder
 from langchain_community.vectorstores import LanceDB
 from langchain_community.llms import Ollama
+from langchain.chat_models import ChatOpenAI
 import langchain_community.document_loaders
 import langchain_community.embeddings
 import langchain_text_splitters
@@ -11,6 +12,8 @@ import lancedb
 import logging
 import glob
 import os
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 logger = logging.getLogger("__main__" + __name__)
 
@@ -24,9 +27,12 @@ class Talker:
         self.chunk_size = self.config["chunk_size"]
         self.chunk_overlap = self.config["chunk_overlap"]
         self.source_dir = self.config["source_dir"]
-        self.api_key = self.config["api_key"]
-        self.folder_id = self.config["folder_id"]
         self.db_dir = self.config["db_dir"]
+
+        self.openai_api_key = self.config["openai_api_key"]
+
+        self.name_hack = self.config["name_hack"]
+        self.surnames = self.name_hack.keys()
 
         self.boot()
 
@@ -85,7 +91,8 @@ class Talker:
         logger.info("Reorderer init: Done")
 
     def _init_llm(self):
-        self.llm = Ollama(model="llama3")
+        # self.llm = Ollama(model="llama3")
+        self.llm = ChatOpenAI(openai_api_key=self.openai_api_key, model_name="gpt-4o")
 
         logger.info("LLM init: Done")
 
@@ -96,9 +103,11 @@ class Talker:
 
         document_variable_name = "context"
         stuff_prompt_override = """
-        Ты - чат-бот по имени Дора и главная собака института №8 Московского Авиационного Института, который отвечает на вопросы абитуриентов про Московский Авиационный Институт. Пиши в начале приветствие от лица института №8.
         Прочитай эту информацию:
         {context}
+
+        Инструкция:
+        Ты - чат-бот по имени Дора и главная собака института №8 Московского Авиационного Института, который отвечает на вопросы абитуриентов про Московский Авиационный Институт. Пиши в начале приветствие от лица института №8.
         Ответь на вопрос '{query}', используя информацию, которую ты прочитал. Ответ представь, не форматируя ответ.
         """
 
@@ -116,12 +125,23 @@ class Talker:
         logger.info("Chain init: Done")
 
     def _query(self, query, reorder=True, show_results=True):
+        query = query.lower()
+        for s in self.surnames:
+            sl = s.lower()
+            if sl in query:
+                logger.info(query)
+                idx = query.index(sl)
+                query = f"{query[:idx + len(f'{s}')]} {self.name_hack[s]} {query[idx + len(f'{s}'):]}"
+                logger.info(query)
+
         results = self.retriever.get_relevant_documents(query)
 
         links = []
         if show_results:
             for x in results:
-                links.append(x.page_content.split("\n")[0])
+                l = x.page_content.split("\n")[0]
+                if l not in links and l != "people":
+                    links.append(l)
                 logger.info(x.page_content)
 
         if reorder:
@@ -129,13 +149,13 @@ class Talker:
 
         logger.info(f"New query: {query}")
 
-        return [self.chain.run(input_documents=results, query=query), list(set(links))]
+        return [self.chain.run(input_documents=results, query=query), links[:4]]
 
     def pretty_answer(self, query):
         llm_answer = self._query(query)
 
         answer = f"{llm_answer[0]}\n\nБолее подробно смотри тут:\n"
         for i, link in enumerate(llm_answer[1]):
-            answer += f"{i}. {link}\n"
+            answer += f"{i + 1}. {link}\n"
 
         return answer

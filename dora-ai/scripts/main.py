@@ -1,3 +1,5 @@
+# python3 main.py --config "../config/config.yaml" --logs "../../logs/logs.log"
+
 import logging
 import sys
 import yaml
